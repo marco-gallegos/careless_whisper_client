@@ -13,6 +13,7 @@ Un script CLI en Python para controlar OBS Studio via WebSocket.
 - 📊 Consulta del estado actual de OBS
 - 🔐 Configuración segura mediante archivo .env
 - 🎯 CLI intuitiva con argumentos claros
+- 📋 Utilidad para copiar texto Lorem Ipsum al clipboard (sin necesidad de OBS)
 
 ### Requisitos Previos
 
@@ -53,6 +54,9 @@ python obs_controller.py --action status
 # Escuchar todos los eventos de OBS en tiempo real
 # (mantiene el script ejecutándose, presiona Ctrl+C para detener)
 python obs_controller.py --action listen-events
+
+# Copiar texto Lorem Ipsum aleatorio al clipboard (no requiere OBS)
+python obs_controller.py --action copy-random-text
 
 # Override de configuración desde CLI (no usa .env)
 python obs_controller.py --action status --host localhost --port 4455 --password mipass

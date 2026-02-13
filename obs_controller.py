@@ -6,6 +6,7 @@ OBS Controller CLI - Control OBS Studio via WebSocket
 import argparse
 import sys
 import time
+import random
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
@@ -17,6 +18,33 @@ except ImportError:
     print("❌ Error: obs-websocket-py no está instalado")
     print("   Instala las dependencias con: pip install -r requirements.txt")
     sys.exit(1)
+
+try:
+    import pyperclip
+except ImportError:
+    print("❌ Error: pyperclip no está instalado")
+    print("   Instala las dependencias con: pip install -r requirements.txt")
+    sys.exit(1)
+
+
+# Lista de frases Lorem Ipsum aleatorias
+LOREM_IPSUM_TEXTS = [
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
+    "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+    "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.",
+    "Totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.",
+    "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores.",
+    "Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.",
+    "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti.",
+    "Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio.",
+    "Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae.",
+    "Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur.",
+    "Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.",
+    "Vel illum qui dolorem eum fugiat quo voluptas nulla pariatur. At vero eos et accusamus.",
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+]
 
 
 class OBSController:
@@ -185,6 +213,25 @@ class OBSController:
                 
         except Exception as e:
             print(f"❌ Error al escuchar eventos: {e}")
+    
+    def copy_random_text_to_clipboard(self):
+        """Copia un texto Lorem Ipsum aleatorio al clipboard del sistema."""
+        try:
+            # Seleccionar un texto aleatorio de la lista
+            random_text = random.choice(LOREM_IPSUM_TEXTS)
+            
+            # Copiar al clipboard
+            pyperclip.copy(random_text)
+            
+            print("📋 Texto copiado al clipboard:")
+            print(f"   \"{random_text[:80]}{'...' if len(random_text) > 80 else ''}\"")
+            print(f"\n✅ Total: {len(random_text)} caracteres copiados")
+            
+            return random_text
+            
+        except Exception as e:
+            print(f"❌ Error al copiar al clipboard: {e}")
+            return None
 
 
 def main():
@@ -208,6 +255,9 @@ Ejemplos de uso:
   
   # Escuchar todos los eventos de OBS (mantiene el script ejecutándose)
   %(prog)s --action listen-events
+  
+  # Copiar texto Lorem Ipsum aleatorio al clipboard (no requiere OBS)
+  %(prog)s --action copy-random-text
 
 Requisitos previos:
   1. OBS Studio debe estar ejecutándose
@@ -225,8 +275,8 @@ Variables en .env:
         '-a', '--action',
         type=str,
         required=True,
-        choices=['start-recording', 'stop-recording', 'status', 'listen-events'],
-        help='Acción a ejecutar en OBS'
+        choices=['start-recording', 'stop-recording', 'status', 'listen-events', 'copy-random-text'],
+        help='Acción a ejecutar en OBS (o utilidades sin conexión)'
     )
     
     parser.add_argument(
@@ -256,7 +306,13 @@ Variables en .env:
         password=args.password
     )
     
-    # Conectar a OBS
+    # La acción 'copy-random-text' no requiere conexión a OBS
+    if args.action == 'copy-random-text':
+        controller.copy_random_text_to_clipboard()
+        print("\n✅ Operación completada\n")
+        return
+    
+    # Para las demás acciones, conectar a OBS
     controller.connect()
     
     try:

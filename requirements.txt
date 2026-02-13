@@ -1,3 +1,6 @@
 # OBS WebSocket control
 obs-websocket-py>=1.0.0
 python-dotenv>=1.0.0
+
+# Clipboard and text generation
+pyperclip>=1.8.0
