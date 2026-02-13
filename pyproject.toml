@@ -1,0 +1,25 @@
+[project]
+name = "careless-whisper-client"
+version = "0.1.0"
+description = "Automation tools for dev workflows using AI - Audio recording and OBS control"
+authors = [
+    {name = "Marco Gallegos", email = "marco.gallegos@example.com"}
+]
+readme = "readme.md"
+requires-python = ">=3.8"
+dependencies = [
+    "obs-websocket-py>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "pyperclip>=1.8.0",
+]
+
+[project.scripts]
+obs-controller = "obs_controller:main"
+audio-recorder = "audio_recorder:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = []

@@ -16,14 +16,14 @@ try:
     from obswebsocket import obsws, requests as obs_requests, events as obs_events
 except ImportError:
     print("❌ Error: obs-websocket-py no está instalado")
-    print("   Instala las dependencias con: pip install -r requirements.txt")
+    print("   Instala las dependencias con: uv sync")
     sys.exit(1)
 
 try:
     import pyperclip
 except ImportError:
     print("❌ Error: pyperclip no está instalado")
-    print("   Instala las dependencias con: pip install -r requirements.txt")
+    print("   Instala las dependencias con: uv sync")
     sys.exit(1)
 
 
@@ -240,7 +240,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Ejemplos de uso:
-  # Configuración inicial
+  # Configuración inicial (con uv)
+  uv sync  # Instala dependencias
   cp .env.example .env
   # Edita .env y configura OBS_HOST, OBS_PORT, OBS_PASSWORD
   

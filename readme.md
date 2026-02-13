@@ -2,6 +2,61 @@
 
 is a project to automate and enhace my workflows as dev using AI.
 
+## 🚀 Gestión de Dependencias con uv
+
+Este proyecto usa [**uv**](https://github.com/astral-sh/uv), un gestor de paquetes Python extremadamente rápido escrito en Rust.
+
+### ¿Por qué uv?
+
+- ⚡ **10-100x más rápido** que pip
+- 🔒 Lock file automático para reproducibilidad
+- 🎯 Gestión integrada de entornos virtuales
+- 📦 Compatible con pyproject.toml (PEP 621)
+
+### Instalación de uv
+
+```shell
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# O con pip (si ya tienes Python)
+pip install uv
+
+# Windows
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+### Comandos Principales
+
+```shell
+# Instalar dependencias
+uv sync
+
+# Agregar nueva dependencia
+uv add nombre-paquete
+
+# Ejecutar script con el entorno del proyecto
+uv run python script.py
+
+# Activar entorno virtual manualmente
+source .venv/bin/activate  # Linux/Mac
+.venv\Scripts\activate     # Windows
+```
+
+### Migración desde pip
+
+Si anteriormente usabas `pip` y `requirements.txt`:
+
+```shell
+# El proyecto ahora usa pyproject.toml como fuente de verdad
+# Simplemente ejecuta:
+uv sync
+
+# requirements.txt se mantiene para compatibilidad, pero es legacy
+# Si prefieres seguir usando pip:
+pip install -e .
+```
+
 ## OBS Controller CLI
 
 Un script CLI en Python para controlar OBS Studio via WebSocket.
@@ -17,23 +72,31 @@ Un script CLI en Python para controlar OBS Studio via WebSocket.
 
 ### Requisitos Previos
 
-1. **OBS Studio** debe estar ejecutándose
-2. **Habilitar WebSocket en OBS**: 
+1. **Instalar uv** (gestor de paquetes Python ultrarrápido):
+   ```shell
+   # macOS/Linux
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   
+   # O con pip
+   pip install uv
+   ```
+
+2. **OBS Studio** debe estar ejecutándose (solo para funciones de OBS)
+3. **Habilitar WebSocket en OBS**: 
    - Ve a `Tools` → `WebSocket Server Settings`
    - Marca "Enable WebSocket server"
    - Configura un puerto (default: 4455) y contraseña opcional
-3. **Instalar dependencias Python**:
-   ```shell
-   pip install -r requirements.txt
-   ```
 
 ### Configuración Inicial
 
 ```shell
-# 1. Copia el archivo de ejemplo
+# 1. Instalar dependencias con uv
+uv sync
+
+# 2. Copia el archivo de ejemplo
 cp .env.example .env
 
-# 2. Edita .env con tus credenciales de OBS
+# 3. Edita .env con tus credenciales de OBS
 # OBS_HOST=localhost
 # OBS_PORT=4455
 # OBS_PASSWORD=tu_contraseña
@@ -43,23 +106,28 @@ cp .env.example .env
 
 ```shell
 # Iniciar grabación en OBS
-python obs_controller.py --action start-recording
+uv run python obs_controller.py --action start-recording
 
 # Detener grabación en OBS
-python obs_controller.py --action stop-recording
+uv run python obs_controller.py --action stop-recording
 
 # Ver estado actual de OBS (versión, estado de grabación, etc.)
-python obs_controller.py --action status
+uv run python obs_controller.py --action status
 
 # Escuchar todos los eventos de OBS en tiempo real
 # (mantiene el script ejecutándose, presiona Ctrl+C para detener)
-python obs_controller.py --action listen-events
+uv run python obs_controller.py --action listen-events
 
 # Copiar texto Lorem Ipsum aleatorio al clipboard (no requiere OBS)
-python obs_controller.py --action copy-random-text
+uv run python obs_controller.py --action copy-random-text
 
 # Override de configuración desde CLI (no usa .env)
-python obs_controller.py --action status --host localhost --port 4455 --password mipass
+uv run python obs_controller.py --action status --host localhost --port 4455 --password mipass
+
+# O después de activar el entorno virtual
+uv sync
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+python obs_controller.py --action start-recording
 ```
 
 ### Eventos que Escucha
@@ -122,13 +190,20 @@ python audio_recorder.py --device 0 --output mi_audio.wav --output-dir ~/grabaci
 
 ### Python Packages
 
+Gestionado con **uv** (gestor de paquetes ultrarrápido):
+
 ```shell
-pip install -r requirements.txt
+# Instalar uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Instalar dependencias del proyecto
+uv sync
 ```
 
-Incluye:
+Dependencias incluidas en `pyproject.toml`:
 - `obs-websocket-py` - Cliente WebSocket para OBS Studio
 - `python-dotenv` - Carga variables de entorno desde .env
+- `pyperclip` - Gestión del clipboard del sistema
 
 ### Mac
 

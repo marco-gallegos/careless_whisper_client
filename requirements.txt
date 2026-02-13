@@ -1,3 +1,11 @@
+# Legacy requirements.txt (deprecated - use pyproject.toml with uv)
+# 
+# This file is kept for backwards compatibility with pip users.
+# The canonical dependency list is now in pyproject.toml
+#
+# For new installations, use: uv sync
+# For pip users: pip install -e .
+
 # OBS WebSocket control
 obs-websocket-py>=1.0.0
 python-dotenv>=1.0.0
