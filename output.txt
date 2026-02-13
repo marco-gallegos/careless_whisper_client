@@ -1,0 +1,39 @@
+[2026-02-12 20:48:49] 📡 RecordStateChanged
+<RecordStateChanged event ({'outputActive': False, 'outputPath': None, 'outputState': 'OBS_WEBSOCKET_OUTPUT_STARTING'})>
+{'name': 'RecordStateChanged', 'datain': {'outputActive': False, 'outputPath': None, 'outputState': 'OBS_WEBSOCKET_OUTPUT_STARTING'}}
+           name: RecordStateChanged
+
+[2026-02-12 20:48:49] 📡 RecordStateChanged
+<RecordStateChanged event ({'outputActive': True, 'outputPath': '/Users/marco.gallegos/Movies/2026-02-12 20-48-49.mp4', 'outputState': 'OBS_WEBSOCKET_OUTPUT_STARTED'})>
+{'name': 'RecordStateChanged', 'datain': {'outputActive': True, 'outputPath': '/Users/marco.gallegos/Movies/2026-02-12 20-48-49.mp4', 'outputState': 'OBS_WEBSOCKET_OUTPUT_STARTED'}}
+           name: RecordStateChanged
+
+[2026-02-12 20:49:07] 📡 RecordStateChanged
+<RecordStateChanged event ({'outputActive': False, 'outputPath': None, 'outputState': 'OBS_WEBSOCKET_OUTPUT_STOPPING'})>
+{'name': 'RecordStateChanged', 'datain': {'outputActive': False, 'outputPath': None, 'outputState': 'OBS_WEBSOCKET_OUTPUT_STOPPING'}}
+           name: RecordStateChanged
+
+[2026-02-12 20:49:07] 📡 RecordStateChanged
+<RecordStateChanged event ({'outputActive': False, 'outputPath': '/Users/marco.gallegos/Movies/2026-02-12 20-48-49.mp4', 'outputState': 'OBS_WEBSOCKET_OUTPUT_STOPPED'})>
+{'name': 'RecordStateChanged', 'datain': {'outputActive': False, 'outputPath': '/Users/marco.gallegos/Movies/2026-02-12 20-48-49.mp4', 'outputState': 'OBS_WEBSOCKET_OUTPUT_STOPPED'}}
+           name: RecordStateChanged
+
+[2026-02-12 20:55:04] 📡 RecordStateChanged
+<RecordStateChanged event ({'outputActive': False, 'outputPath': None, 'outputState': 'OBS_WEBSOCKET_OUTPUT_STARTING'})>
+{'name': 'RecordStateChanged', 'datain': {'outputActive': False, 'outputPath': None, 'outputState': 'OBS_WEBSOCKET_OUTPUT_STARTING'}}
+           name: RecordStateChanged
+
+[2026-02-12 20:55:04] 📡 RecordStateChanged
+<RecordStateChanged event ({'outputActive': True, 'outputPath': '/Users/marco.gallegos/Movies/2026-02-12 20-55-04.mp4', 'outputState': 'OBS_WEBSOCKET_OUTPUT_STARTED'})>
+{'name': 'RecordStateChanged', 'datain': {'outputActive': True, 'outputPath': '/Users/marco.gallegos/Movies/2026-02-12 20-55-04.mp4', 'outputState': 'OBS_WEBSOCKET_OUTPUT_STARTED'}}
+           name: RecordStateChanged
+
+[2026-02-12 20:55:05] 📡 RecordStateChanged
+<RecordStateChanged event ({'outputActive': False, 'outputPath': None, 'outputState': 'OBS_WEBSOCKET_OUTPUT_STOPPING'})>
+{'name': 'RecordStateChanged', 'datain': {'outputActive': False, 'outputPath': None, 'outputState': 'OBS_WEBSOCKET_OUTPUT_STOPPING'}}
+           name: RecordStateChanged
+
+[2026-02-12 20:55:06] 📡 RecordStateChanged
+<RecordStateChanged event ({'outputActive': False, 'outputPath': '/Users/marco.gallegos/Movies/2026-02-12 20-55-04.mp4', 'outputState': 'OBS_WEBSOCKET_OUTPUT_STOPPED'})>
+{'name': 'RecordStateChanged', 'datain': {'outputActive': False, 'outputPath': '/Users/marco.gallegos/Movies/2026-02-12 20-55-04.mp4', 'outputState': 'OBS_WEBSOCKET_OUTPUT_STOPPED'}}
+           name: RecordStateChanged

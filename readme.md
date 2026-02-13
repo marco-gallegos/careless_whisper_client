@@ -146,6 +146,48 @@ Cada evento se muestra con:
 - Tipo de evento
 - Datos asociados al evento
 
+## OBS Record and Send
+
+Script con Click que inicia la grabación en OBS vía WebSocket, espera a que la detengas desde OBS, captura el path del archivo resultante y opcionalmente lo envía a una API externa.
+
+### Flujo del script
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Script
+  participant OBS as OBS WebSocket
+  participant API as API externa
+
+  User->>Script: run (click)
+  Script->>OBS: connect
+  Script->>OBS: StartRecord
+  Script->>Script: register RecordStateChanged, block until STOPPED
+  User->>OBS: Stop record (desde OBS o script)
+  OBS->>Script: RecordStateChanged outputPath, STOPPED
+  Script->>Script: guardar outputPath
+  Script->>User: mostrar path
+  User->>Script: opcional --send
+  Script->>API: POST archivo (multipart/form-data)
+  API->>Script: respuesta
+  Script->>User: resultado
+```
+
+### Uso
+
+```shell
+# Grabar y solo mostrar el path del archivo (detén la grabación desde OBS)
+uv run python record_and_send.py record
+
+# Grabar y enviar el archivo a la API configurada en .env
+uv run python record_and_send.py record --send
+
+# Enviar un archivo ya grabado a la API
+uv run python record_and_send.py send --file /ruta/al/video.mp4 --api-url https://api.example.com/process
+```
+
+Variables en `.env`: `OBS_HOST`, `OBS_PORT`, `OBS_PASSWORD`, `RECORD_SEND_API_URL`, `RECORD_SEND_API_TOKEN` (opcional).
+
 ## Audio Recorder CLI
 
 Un script CLI en Python para grabar audio usando ffmpeg.
