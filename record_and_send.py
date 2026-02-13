@@ -6,6 +6,7 @@ capture the output file path, and optionally send it to an external API.
 
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -105,10 +106,10 @@ class RecordAndSendController:
             self.recorded_file_path = output_path
             self.recording_stopped = True
 
-    def start_and_wait_for_stop(self, timeout_seconds=None):
+    def start_and_wait_for_stop(self, timeout_seconds=None, stop_from_cli=True):
         """
         Start recording, register for RecordStateChanged, and block until
-        recording is stopped (user can stop from OBS or we could call StopRecord).
+        recording is stopped (user can stop from OBS or press Enter in CLI).
         Returns the output file path or None on timeout/error.
         """
         if not self.connected:
@@ -133,6 +134,18 @@ class RecordAndSendController:
             raise click.ClickException(f"Error al iniciar grabación: {e}")
 
         click.echo("🔴 Grabación iniciada. Detén la grabación desde OBS cuando termines.")
+        if stop_from_cli:
+            click.echo("   (O presiona Enter aquí para detener desde la CLI)")
+            def stop_on_enter():
+                input()
+                if not self.recording_stopped and self.ws and self.connected:
+                    try:
+                        self.ws.call(obs_requests.StopRecord())
+                    except Exception:
+                        pass
+            stop_thread = threading.Thread(target=stop_on_enter, daemon=True)
+            stop_thread.start()
+
         deadline = time.monotonic() + timeout_seconds
         while not self.recording_stopped and time.monotonic() < deadline:
             time.sleep(0.3)
@@ -212,10 +225,15 @@ def cli(ctx, host, port, password):
     default=None,
     help="Bearer token for API (overrides RECORD_SEND_API_TOKEN)",
 )
+@click.option(
+    "--stop-from-cli/--no-stop-from-cli",
+    default=True,
+    help="Permitir detener la grabación desde la CLI con Enter (default: activado)",
+)
 @click.pass_context
-def record(ctx, do_send, timeout, api_url, api_token):
+def record(ctx, do_send, timeout, api_url, api_token, stop_from_cli):
     """
-    Start OBS recording, wait until you stop it from OBS, then show the file path.
+    Start OBS recording, wait until you stop it from OBS (or Enter en la CLI), then show the file path.
     Use --send to also POST the file to the configured API.
     """
     ctrl = RecordAndSendController(
@@ -226,7 +244,9 @@ def record(ctx, do_send, timeout, api_url, api_token):
     click.echo(f"🔌 Conectando a OBS en {ctrl.host}:{ctrl.port}...")
     ctrl.connect()
     try:
-        file_path = ctrl.start_and_wait_for_stop(timeout_seconds=timeout)
+        file_path = ctrl.start_and_wait_for_stop(
+            timeout_seconds=timeout, stop_from_cli=stop_from_cli
+        )
         if not file_path:
             raise click.ClickException("No se obtuvo el path del archivo grabado.")
         click.echo(f"📁 Archivo grabado: {file_path}")
