@@ -1,7 +1,78 @@
 # Careless whisper
 
-
 is a project to automate and enhace my workflows as dev using AI.
+
+## OBS Controller CLI
+
+Un script CLI en Python para controlar OBS Studio via WebSocket.
+
+### Características
+
+- 🎬 Control de grabación en OBS (iniciar/detener)
+- 📡 Escucha de eventos en tiempo real
+- 📊 Consulta del estado actual de OBS
+- 🔐 Configuración segura mediante archivo .env
+- 🎯 CLI intuitiva con argumentos claros
+
+### Requisitos Previos
+
+1. **OBS Studio** debe estar ejecutándose
+2. **Habilitar WebSocket en OBS**: 
+   - Ve a `Tools` → `WebSocket Server Settings`
+   - Marca "Enable WebSocket server"
+   - Configura un puerto (default: 4455) y contraseña opcional
+3. **Instalar dependencias Python**:
+   ```shell
+   pip install -r requirements.txt
+   ```
+
+### Configuración Inicial
+
+```shell
+# 1. Copia el archivo de ejemplo
+cp .env.example .env
+
+# 2. Edita .env con tus credenciales de OBS
+# OBS_HOST=localhost
+# OBS_PORT=4455
+# OBS_PASSWORD=tu_contraseña
+```
+
+### Uso
+
+```shell
+# Iniciar grabación en OBS
+python obs_controller.py --action start-recording
+
+# Detener grabación en OBS
+python obs_controller.py --action stop-recording
+
+# Ver estado actual de OBS (versión, estado de grabación, etc.)
+python obs_controller.py --action status
+
+# Escuchar todos los eventos de OBS en tiempo real
+# (mantiene el script ejecutándose, presiona Ctrl+C para detener)
+python obs_controller.py --action listen-events
+
+# Override de configuración desde CLI (no usa .env)
+python obs_controller.py --action status --host localhost --port 4455 --password mipass
+```
+
+### Eventos que Escucha
+
+Cuando usas `--action listen-events`, el script captura y muestra:
+
+- 🔴 **Eventos de Grabación**: inicio, detención, pausa, reanudación
+- 📺 **Eventos de Streaming**: inicio, detención
+- 🎭 **Cambios de Escena**: transiciones entre escenas
+- 🎚️ **Cambios de Sources**: habilitación/deshabilitación de elementos
+- 📊 **Métricas de Audio**: niveles de volumen (VU meters)
+- 🚪 **Eventos de Sistema**: cierre de OBS
+
+Cada evento se muestra con:
+- Timestamp
+- Tipo de evento
+- Datos asociados al evento
 
 ## Audio Recorder CLI
 
@@ -44,6 +115,16 @@ python audio_recorder.py --device 0 --output mi_audio.wav --output-dir ~/grabaci
 - `{filepath}` - Ruta absoluta del archivo
 
 ## Dependencies
+
+### Python Packages
+
+```shell
+pip install -r requirements.txt
+```
+
+Incluye:
+- `obs-websocket-py` - Cliente WebSocket para OBS Studio
+- `python-dotenv` - Carga variables de entorno desde .env
 
 ### Mac
 
