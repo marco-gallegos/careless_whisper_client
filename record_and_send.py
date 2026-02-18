@@ -174,10 +174,14 @@ class RecordAndSendController:
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
+        params = {
+            "model": "small",
+        }
+
         try:
             with open(path, "rb") as f:
                 files = {field_name: (path.name, f, "application/octet-stream")}
-                resp = requests.post(api_url, files=files, headers=headers, timeout=120)
+                resp = requests.post(api_url, files=files, headers=headers, timeout=120, params=params)
             if resp.ok:
                 return True, resp
             return False, f"API respondió {resp.status_code}: {resp.text[:500]}"
