@@ -36,3 +36,7 @@ recordings/
 
 # Logs
 *.log
+
+# dbs
+*.db
+*.sqlite*

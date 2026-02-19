@@ -4,13 +4,23 @@ OBS Record and Send - Start recording via OBS WebSocket, wait until stopped,
 capture the output file path, and optionally send it to an external API.
 """
 
+import json
 import os
+import sqlite3
 import sys
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+try:
+    import pyperclip
+except ImportError:
+    print("❌ Error: pyperclip no está instalado")
+    print("   Instala las dependencias con: uv sync")
+    sys.exit(1)
 
 try:
     import click
@@ -36,6 +46,98 @@ except ImportError:
 
 OBS_OUTPUT_STOPPED = "OBS_WEBSOCKET_OUTPUT_STOPPED"
 DEFAULT_TIMEOUT_SECONDS = 1 * 60 * 60  # 1 hour
+DEFAULT_DB_PATH = Path(__file__).resolve().parent / "transcriptions.db"
+
+
+def get_db_connection(db_path=None):
+    """Get a connection to the SQLite database."""
+    db_path = db_path or DEFAULT_DB_PATH
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_database(db_path=None):
+    """Initialize the SQLite database with required tables."""
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS transcriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            transcription TEXT NOT NULL,
+            language TEXT,
+            processing_time REAL,
+            model_used TEXT,
+            source_file TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS segments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            transcription_id INTEGER NOT NULL,
+            segment_id INTEGER NOT NULL,
+            start_time REAL NOT NULL,
+            end_time REAL NOT NULL,
+            text TEXT NOT NULL,
+            FOREIGN KEY (transcription_id) REFERENCES transcriptions (id)
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+
+
+def store_transcription(response_data, source_file=None, db_path=None):
+    """
+    Store transcription and segments in the database.
+    Returns the transcription ID.
+    """
+    init_database(db_path)
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        INSERT INTO transcriptions (transcription, language, processing_time, model_used, source_file)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        response_data.get("transcription", ""),
+        response_data.get("language"),
+        response_data.get("processing_time"),
+        response_data.get("model_used"),
+        str(source_file) if source_file else None
+    ))
+    
+    transcription_id = cursor.lastrowid
+    
+    segments = response_data.get("segments", [])
+    for segment in segments:
+        cursor.execute("""
+            INSERT INTO segments (transcription_id, segment_id, start_time, end_time, text)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            transcription_id,
+            segment.get("id", 0),
+            segment.get("start", 0.0),
+            segment.get("end", 0.0),
+            segment.get("text", "")
+        ))
+    
+    conn.commit()
+    conn.close()
+    return transcription_id
+
+
+def copy_to_clipboard(text):
+    """Copy text to system clipboard."""
+    try:
+        pyperclip.copy(text)
+        return True
+    except Exception as e:
+        click.echo(f"⚠️ No se pudo copiar al portapapeles: {e}", err=True)
+        return False
 
 
 def _unregister_record_callback(ws, callback, event=obs_events.RecordStateChanged):
@@ -300,9 +402,239 @@ def send_file(file_path, api_url, api_token):
     if ok:
         click.echo("✅ Archivo enviado correctamente.")
         if hasattr(result, "text") and result.text:
-            click.echo(result.text[:1000])
+            click.echo(result.text)
     else:
         raise click.ClickException(f"Error al enviar: {result}")
+
+
+@cli.command("translate")
+@click.option(
+    "--file",
+    "file_path",
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+    help="Path to the audio file to transcribe",
+)
+@click.option(
+    "--api-url",
+    type=str,
+    envvar="RECORD_SEND_API_URL",
+    default=None,
+    help="API URL for transcription (or set RECORD_SEND_API_URL)",
+)
+@click.option(
+    "--api-token",
+    type=str,
+    envvar="RECORD_SEND_API_TOKEN",
+    default=None,
+    help="Bearer token for API",
+)
+@click.option(
+    "--copy/--no-copy",
+    default=True,
+    help="Copy transcription to clipboard (default: enabled)",
+)
+@click.option(
+    "--store/--no-store",
+    default=True,
+    help="Store transcription in local database (default: enabled)",
+)
+@click.option(
+    "--db-path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Path to SQLite database (default: transcriptions.db in script directory)",
+)
+def translate(file_path, api_url, api_token, copy, store, db_path):
+    """
+    Transcribe an audio file via API, copy to clipboard, and store in database.
+    """
+    load_config()
+    if not api_url:
+        raise click.ClickException("Indica --api-url o configura RECORD_SEND_API_URL")
+    
+    ctrl = RecordAndSendController()
+    click.echo(f"📤 Enviando archivo para transcripción: {file_path}")
+    
+    ok, result = ctrl.send_file_to_api(file_path, api_url=api_url, token=api_token)
+    
+    if not ok:
+        raise click.ClickException(f"Error al enviar a la API: {result}")
+    
+    try:
+        response_data = result.json()
+    except (json.JSONDecodeError, AttributeError) as e:
+        raise click.ClickException(f"Error al parsear respuesta JSON: {e}")
+    
+    if response_data.get("status") != "success":
+        raise click.ClickException(f"La API reportó error: {response_data}")
+    
+    transcription = response_data.get("transcription", "")
+    language = response_data.get("language", "unknown")
+    segments = response_data.get("segments", [])
+    processing_time = response_data.get("processing_time", 0)
+    model_used = response_data.get("model_used", "unknown")
+    
+    click.echo(f"\n📝 Transcripción ({language}):")
+    click.echo(f"   {transcription}")
+    click.echo(f"\n⏱️  Tiempo de procesamiento: {processing_time:.2f}s")
+    click.echo(f"🤖 Modelo usado: {model_used}")
+    click.echo(f"📊 Segmentos: {len(segments)}")
+    
+    if copy:
+        if copy_to_clipboard(transcription):
+            click.echo("📋 Transcripción copiada al portapapeles")
+    
+    if store:
+        try:
+            transcription_id = store_transcription(response_data, source_file=file_path, db_path=db_path)
+            db_location = db_path or DEFAULT_DB_PATH
+            click.echo(f"💾 Guardado en base de datos (ID: {transcription_id})")
+            click.echo(f"   📁 DB: {db_location}")
+        except Exception as e:
+            click.echo(f"⚠️ Error al guardar en base de datos: {e}", err=True)
+
+
+@cli.command("list-transcriptions")
+@click.option(
+    "--db-path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Path to SQLite database",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=10,
+    help="Number of transcriptions to show (default: 10)",
+)
+@click.option(
+    "--show-segments",
+    is_flag=True,
+    default=False,
+    help="Show segments for each transcription",
+)
+def list_transcriptions(db_path, limit, show_segments):
+    """List stored transcriptions from the local database."""
+    db_path = db_path or DEFAULT_DB_PATH
+    
+    if not Path(db_path).exists():
+        click.echo("📭 No hay base de datos. Aún no se han guardado transcripciones.")
+        return
+    
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT id, transcription, language, processing_time, model_used, source_file, created_at
+        FROM transcriptions
+        ORDER BY created_at DESC
+        LIMIT ?
+    """, (limit,))
+    
+    transcriptions = cursor.fetchall()
+    
+    if not transcriptions:
+        click.echo("📭 No hay transcripciones almacenadas.")
+        conn.close()
+        return
+    
+    click.echo(f"📚 Últimas {len(transcriptions)} transcripciones:\n")
+    
+    for t in transcriptions:
+        click.echo(f"━━━ ID: {t['id']} ━━━")
+        click.echo(f"📅 {t['created_at']}")
+        click.echo(f"🌐 Idioma: {t['language']} | ⏱️ {t['processing_time']:.2f}s | 🤖 {t['model_used']}")
+        if t['source_file']:
+            click.echo(f"📁 Archivo: {t['source_file']}")
+        
+        text_preview = t['transcription'][:100] + "..." if len(t['transcription']) > 100 else t['transcription']
+        click.echo(f"📝 {text_preview}")
+        
+        if show_segments:
+            cursor.execute("""
+                SELECT segment_id, start_time, end_time, text
+                FROM segments
+                WHERE transcription_id = ?
+                ORDER BY segment_id
+            """, (t['id'],))
+            segments = cursor.fetchall()
+            if segments:
+                click.echo("   Segmentos:")
+                for seg in segments:
+                    click.echo(f"   [{seg['start_time']:.2f}s - {seg['end_time']:.2f}s] {seg['text']}")
+        
+        click.echo()
+    
+    conn.close()
+
+
+@cli.command("get-transcription")
+@click.option(
+    "--id",
+    "transcription_id",
+    type=int,
+    required=True,
+    help="Transcription ID to retrieve",
+)
+@click.option(
+    "--db-path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Path to SQLite database",
+)
+@click.option(
+    "--copy/--no-copy",
+    default=False,
+    help="Copy transcription to clipboard",
+)
+def get_transcription(transcription_id, db_path, copy):
+    """Get a specific transcription by ID and optionally copy to clipboard."""
+    db_path = db_path or DEFAULT_DB_PATH
+    
+    if not Path(db_path).exists():
+        raise click.ClickException("No hay base de datos.")
+    
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT id, transcription, language, processing_time, model_used, source_file, created_at
+        FROM transcriptions
+        WHERE id = ?
+    """, (transcription_id,))
+    
+    t = cursor.fetchone()
+    
+    if not t:
+        conn.close()
+        raise click.ClickException(f"No se encontró transcripción con ID {transcription_id}")
+    
+    click.echo(f"━━━ Transcripción ID: {t['id']} ━━━")
+    click.echo(f"📅 {t['created_at']}")
+    click.echo(f"🌐 Idioma: {t['language']} | ⏱️ {t['processing_time']:.2f}s | 🤖 {t['model_used']}")
+    if t['source_file']:
+        click.echo(f"📁 Archivo: {t['source_file']}")
+    click.echo(f"\n📝 Transcripción completa:\n{t['transcription']}\n")
+    
+    cursor.execute("""
+        SELECT segment_id, start_time, end_time, text
+        FROM segments
+        WHERE transcription_id = ?
+        ORDER BY segment_id
+    """, (transcription_id,))
+    segments = cursor.fetchall()
+    
+    if segments:
+        click.echo("📊 Segmentos:")
+        for seg in segments:
+            click.echo(f"   [{seg['start_time']:.2f}s - {seg['end_time']:.2f}s] {seg['text']}")
+    
+    conn.close()
+    
+    if copy:
+        if copy_to_clipboard(t['transcription']):
+            click.echo("\n📋 Transcripción copiada al portapapeles")
 
 
 def main():
