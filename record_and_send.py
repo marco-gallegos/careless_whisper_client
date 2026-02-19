@@ -336,8 +336,14 @@ def cli(ctx, host, port, password):
     default=True,
     help="Permitir detener la grabación desde la CLI con Enter (default: activado)",
 )
+@click.option(
+    "--db-path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Path to SQLite database (default: transcriptions.db in script directory)",
+)
 @click.pass_context
-def record(ctx, do_send, timeout, api_url, api_token, stop_from_cli):
+def record(ctx, do_send, timeout, api_url, api_token, stop_from_cli, db_path):
     """
     Start OBS recording, wait until you stop it from OBS (or Enter en la CLI), then show the file path.
     Use --send to also POST the file to the configured API.
@@ -362,6 +368,16 @@ def record(ctx, do_send, timeout, api_url, api_token, stop_from_cli):
                 click.echo("✅ Archivo enviado correctamente a la API.")
                 if hasattr(result, "text") and result.text:
                     click.echo(result.text[:1000])
+                try:
+                    response_data = result.json()
+                    transcription_id = store_transcription(response_data, source_file=file_path, db_path=db_path)
+                    db_location = db_path or DEFAULT_DB_PATH
+                    click.echo(f"💾 Transcripción guardada en base de datos (ID: {transcription_id})")
+                    click.echo(f"   📁 DB: {db_location}")
+                except (json.JSONDecodeError, AttributeError):
+                    click.echo("⚠️ No se pudo parsear la respuesta para guardar la transcripción.", err=True)
+                except Exception as e:
+                    click.echo(f"⚠️ Error al guardar transcripción: {e}", err=True)
             else:
                 raise click.ClickException(f"Error al enviar a la API: {result}")
     finally:
